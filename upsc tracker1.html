@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UPSC Target Tracker</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #151f33;
+      --card-hover: #1c2a45;
+      --border: #233352;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+      --c-daily: #38bdf8;
+      --c-weekly: #fbbf24;
+      --c-monthly: #c084fc;
+      --c-accent: #34d399;
+      --danger: #f87171;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 18px; min-height: 100vh; }
+
+    /* Top Navigation & Breadcrumbs */
+    header { margin-bottom: 20px; }
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+    .crumb-btn {
+      color: var(--c-daily);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: inherit;
+      font-weight: 600;
+      padding: 0;
+    }
+    .crumb-separator { color: var(--border); }
+    .crumb-active { color: var(--text); }
+
+    /* Circular Progress Component */
+    .ring-wrap { position: relative; display: inline-flex; justify-content: center; align-items: center; }
+    svg.circle-ring { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: #1e293b; }
+    .ring-fill { fill: none; stroke-linecap: round; transition: stroke-dasharray 0.3s ease; }
+    .ring-val {
+      position: absolute;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Views Common */
+    .view-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+
+    /* Folder & Subject Cards */
+    .folder-card, .subject-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .folder-card:active, .subject-card:active { background: var(--card-hover); border-color: var(--c-daily); }
+
+    .card-info { display: flex; flex-direction: column; gap: 4px; }
+    .card-title { font-size: 1.05rem; font-weight: 700; }
+    .card-subtitle { font-size: 0.8rem; color: var(--text-dim); }
+
+    /* Topic Tracker View */
+    .topic-view-container { display: flex; flex-direction: column; gap: 16px; }
+    
+    .stats-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      text-align: center;
+    }
+    .stat-unit { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .stat-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+
+    /* Input Section */
+    .add-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .add-box input {
+      flex: 1;
+      min-width: 180px;
+      background: #0b1120;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.95rem;
+    }
+    .add-box select {
+      background: #0b1120;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .btn-submit {
+      background: var(--c-daily);
+      color: #0b1120;
+      font-weight: 700;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* Target Checklist */
+    .list-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .task-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0d1527;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 10px;
+      gap: 10px;
+    }
+    .task-row.done { opacity: 0.5; }
+    .task-row.done .task-txt { text-decoration: line-through; color: var(--text-dim); }
+
+    .task-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+    .task-checkbox { width: 20px; height: 20px; accent-color: var(--c-accent); cursor: pointer; }
+    .task-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+    .tag-daily { background: rgba(56, 189, 248, 0.2); color: var(--c-daily); }
+    .tag-weekly { background: rgba(251, 191, 36, 0.2); color: var(--c-weekly); }
+    .tag-monthly { background: rgba(192, 132, 252, 0.2); color: var(--c-monthly); }
+
+    .btn-del { background: transparent; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; padding: 4px 8px; }
+    .empty-state { text-align: center; color: var(--text-dim); font-size: 0.85rem; padding: 24px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Breadcrumbs -->
+  <header>
+    <div class="breadcrumbs" id="breadcrumbBar"></div>
+  </header>
+
+  <!-- View Display Area -->
+  <main id="appContainer"></main>
+
+  <script>
+    const STORAGE_KEY = 'upsc_drilled_folders_db';
+
+    // Comprehensive UPSC Structure with default syllabus breakdown
+    const defaultData = {
+      gs1: {
+        id: 'gs1',
+        title: 'GS 1 Folder',
+        desc: 'History, Society & Geography',
+        isCsat: false,
+        subjects: [
+          { id: 'gs1_mod_hist', name: 'Modern Indian History', tasks: [] },
+          { id: 'gs1_anc_med', name: 'Ancient & Medieval History', tasks: [] },
+          { id: 'gs1_art_cul', name: 'Art & Culture', tasks: [] },
+          { id: 'gs1_geo', name: 'Physical, Human & Economic Geography', tasks: [] },
+          { id: 'gs1_soc', name: 'Indian Society & Social Issues', tasks: [] },
+          { id: 'gs1_post_world', name: 'Post-Independence & World History', tasks: [] }
+        ]
+      },
+      gs2: {
+        id: 'gs2',
+        title: 'GS 2 Folder',
+        desc: 'Polity, Governance & IR',
+        isCsat: false,
+        subjects: [
+          { id: 'gs2_polity', name: 'Indian Constitution & Polity', tasks: [] },
+          { id: 'gs2_gov', name: 'Governance & Administrative Reforms', tasks: [] },
+          { id: 'gs2_soc_jus', name: 'Social Justice & Vulnerable Sections', tasks: [] },
+          { id: 'gs2_ir', name: 'International Relations & Bodies', tasks: [] }
+        ]
+      },
+      gs3: {
+        id: 'gs3',
+        title: 'GS 3 Folder',
+        desc: 'Economy, Env, S&T & Security',
+        isCsat: false,
+        subjects: [
+          { id: 'gs3_eco', name: 'Indian Economy & Macro Trends', tasks: [] },
+          { id: 'gs3_agri', name: 'Agriculture & Food Processing', tasks: [] },
+          { id: 'gs3_env', name: 'Environment, Ecology & DM', tasks: [] },
+          { id: 'gs3_snt', name: 'Science & Technology Developments', tasks: [] },
+          { id: 'gs3_sec', name: 'Internal Security & Cyber Threats', tasks: [] }
+        ]
+      },
+      gs4: {
+        id: 'gs4',
+        title: 'GS 4 Folder',
+        desc: 'Ethics, Integrity & Aptitude',
+        isCsat: false,
+        subjects: [
+          { id: 'gs4_theory', name: 'Ethics, Attitude & Human Interface', tasks: [] },
+          { id: 'gs4_thinkers', name: 'Moral Thinkers & Philosophers', tasks: [] },
+          { id: 'gs4_probity', name: 'Probity in Governance & RTI', tasks: [] },
+          { id: 'gs4_cases', name: 'Case Studies Practice', tasks: [] }
+        ]
+      },
+      maths: {
+        id: 'maths',
+        title: 'Maths Optional',
+        desc: 'Paper 1 & Paper 2',
+        isCsat: false,
+        subjects: [
+          { id: 'm_linalg', name: 'P1: Linear Algebra', tasks: [] },
+          { id: 'm_calc', name: 'P1: Calculus & Analytic Geometry', tasks: [] },
+          { id: 'm_ode', name: 'P1: ODE & Vector Analysis', tasks: [] },
+          { id: 'm_stat_dyn', name: 'P1: Statics & Dynamics', tasks: [] },
+          { id: 'm_alg', name: 'P2: Modern / Abstract Algebra', tasks: [] },
+          { id: 'm_real', name: 'P2: Real & Complex Analysis', tasks: [] },
+          { id: 'm_lpp', name: 'P2: Linear Programming (LPP)', tasks: [] },
+          { id: 'm_pde_num', name: 'P2: PDE & Numerical Methods', tasks: [] },
+          { id: 'm_fluid', name: 'P2: Mechanics & Fluid Dynamics', tasks: [] }
+        ]
+      },
+      csat: {
+        id: 'csat',
+        title: 'CSAT Folder',
+        desc: 'Weekly & Monthly Aptitude Tracking',
+        isCsat: true,
+        subjects: [
+          { id: 'csat_quant', name: 'Quantitative Aptitude', tasks: [] },
+          { id: 'csat_reasoning', name: 'Logical & Analytical Reasoning', tasks: [] },
+          { id: 'csat_rc', name: 'Reading Comprehension', tasks: [] }
+        ]
+      }
+    };
+
+    // Global App State
+    let db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData;
+    let currentNav = { level: 'folders', folderId: null, subjectId: null };
+
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      render();
+    }
+
+    // Helper: Completion Percentage
+    function calcPct(tasks) {
+      if (!tasks || tasks.length === 0) return 0;
+      const done = tasks.filter(t => t.completed).length;
+      return Math.round((done / tasks.length) * 100);
+    }
+
+    function calcFolderPct(folder) {
+      let total = 0, done = 0;
+      folder.subjects.forEach(s => {
+        total += s.tasks.length;
+        done += s.tasks.filter(t => t.completed).length;
+      });
+      return total === 0 ? 0 : Math.round((done / total) * 100);
+    }
+
+    // SVG Circular Ring Generator
+    function makeRing(pct, strokeColor, size = 56, strokeWidth = 5) {
+      const radius = 16;
+      const strokeDash = `${pct}, 100`;
+      return `
+        <div class="ring-wrap" style="width:${size}px; height:${size}px;">
+          <svg viewBox="0 0 36 36" class="circle-ring" style="width:100%; height:100%;">
+            <path class="ring-bg" stroke-width="${strokeWidth}" d="M18 2.0845 a ${radius} ${radius} 0 0 1 0 31.831 a ${radius} ${radius} 0 0 1 0 -31.831" />
+            <path class="ring-fill" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}" d="M18 2.0845 a ${radius} ${radius} 0 0 1 0 31.831 a ${radius} ${radius} 0 0 1 0 -31.831" />
+          </svg>
+          <div class="ring-val" style="font-size:${size * 0.22}px; color:${strokeColor};">${pct}%</div>
+        </div>
+      `;
+    }
+
+    // Navigation functions
+    window.gotoFolders = function() {
+      currentNav = { level: 'folders', folderId: null, subjectId: null };
+      render();
+    };
+
+    window.gotoFolder = function(folderId) {
+      currentNav = { level: 'subjects', folderId: folderId, subjectId: null };
+      render();
+    };
+
+    window.gotoSubject = function(folderId, subjectId) {
+      currentNav = { level: 'topics', folderId: folderId, subjectId: subjectId };
+      render();
+    };
+
+    // Task Operations
+    window.addTask = function(folderId, subjectId) {
+      const input = document.getElementById('newTopicInput');
+      const select = document.getElementById('periodSelect');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const sub = db[folderId].subjects.find(s => s.id === subjectId);
+      sub.tasks.push({
+        id: Date.now(),
+        text: text,
+        period: select.value,
+        completed: false
+      });
+
+      input.value = '';
+      persist();
+    };
+
+    window.toggleTask = function(folderId, subjectId, taskId) {
+      const sub = db[folderId].subjects.find(s => s.id === subjectId);
+      const t = sub.tasks.find(x => x.id === taskId);
+      if (t) {
+        t.completed = !t.completed;
+        persist();
+      }
+    };
+
+    window.deleteTask = function(folderId, subjectId, taskId) {
+      const sub = db[folderId].subjects.find(s => s.id === subjectId);
+      sub.tasks = sub.tasks.filter(x => x.id !== taskId);
+      persist();
+    };
+
+    // Core Render Engine
+    function render() {
+      const breadcrumbBar = document.getElementById('breadcrumbBar');
+      const container = document.getElementById('appContainer');
+
+      // 1. Render Breadcrumbs
+      let breadcrumbsHtml = `<button class="crumb-btn" onclick="gotoFolders()">Folders</button>`;
+      if (currentNav.folderId) {
+        const folder = db[currentNav.folderId];
+        breadcrumbsHtml += ` <span class="crumb-separator">/</span> <button class="crumb-btn" onclick="gotoFolder('${folder.id}')">${folder.title}</button>`;
+      }
+      if (currentNav.subjectId) {
+        const sub = db[currentNav.folderId].subjects.find(s => s.id === currentNav.subjectId);
+        breadcrumbsHtml += ` <span class="crumb-separator">/</span> <span class="crumb-active">${sub.name}</span>`;
+      }
+      breadcrumbBar.innerHTML = breadcrumbsHtml;
+
+      // 2. View: FOLDERS (Root)
+      if (currentNav.level === 'folders') {
+        let html = `<div class="view-title">UPSC Subject Folders</div><div class="grid">`;
+        Object.keys(db).forEach(fKey => {
+          const folder = db[fKey];
+          const pct = calcFolderPct(folder);
+          html += `
+            <div class="folder-card" onclick="gotoFolder('${folder.id}')">
+              <div class="card-info">
+                <span class="card-title">${folder.title}</span>
+                <span class="card-subtitle">${folder.desc}</span>
+              </div>
+              ${makeRing(pct, '#38bdf8', 60)}
+            </div>
+          `;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+      }
+
+      // 3. View: SUBJECTS (Inside a Folder)
+      else if (currentNav.level === 'subjects') {
+        const folder = db[currentNav.folderId];
+        const overallFolderPct = calcFolderPct(folder);
+
+        let html = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div class="view-title" style="margin:0;">${folder.title} Subjects</div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:0.85rem; color:var(--text-dim);">Folder Total:</span>
+              ${makeRing(overallFolderPct, '#38bdf8', 48, 4)}
+            </div>
+          </div>
+          <div class="grid">
+        `;
+
+        folder.subjects.forEach(sub => {
+          const subPct = calcPct(sub.tasks);
+          html += `
+            <div class="subject-card" onclick="gotoSubject('${folder.id}', '${sub.id}')">
+              <div class="card-info">
+                <span class="card-title">${sub.name}</span>
+                <span class="card-subtitle">${sub.tasks.filter(t=>t.completed).length}/${sub.tasks.length} topics finished</span>
+              </div>
+              ${makeRing(subPct, '#34d399', 54)}
+            </div>
+          `;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+      }
+
+      // 4. View: TOPICS (Daily, Weekly, Monthly Tracker)
+      else if (currentNav.level === 'topics') {
+        const folder = db[currentNav.folderId];
+        const sub = folder.subjects.find(s => s.id === currentNav.subjectId);
+        const isCsat = folder.isCsat;
+
+        // Stats by period
+        const dailyTasks = sub.tasks.filter(t => t.period === 'daily');
+        const weeklyTasks = sub.tasks.filter(t => t.period === 'weekly');
+        const monthlyTasks = sub.tasks.filter(t => t.period === 'monthly');
+
+        const dailyPct = calcPct(dailyTasks);
+        const weeklyPct = calcPct(weeklyTasks);
+        const monthlyPct = calcPct(monthlyTasks);
+
+        let statsCardsHtml = '';
+        if (isCsat) {
+          // CSAT tracks Weekly and Monthly
+          statsCardsHtml = `
+            <div class="stat-unit">
+              ${makeRing(weeklyPct, 'var(--c-weekly)', 64)}
+              <span class="stat-label">Weekly CSAT</span>
+            </div>
+            <div class="stat-unit">
+              ${makeRing(monthlyPct, 'var(--c-monthly)', 64)}
+              <span class="stat-label">Monthly CSAT</span>
+            </div>
+          `;
+        } else {
+          // GS 1, 2, 3, 4 and Maths Optional track Daily, Weekly, Monthly
+          statsCardsHtml = `
+            <div class="stat-unit">
+              ${makeRing(dailyPct, 'var(--c-daily)', 62)}
+              <span class="stat-label">Daily</span>
+            </div>
+            <div class="stat-unit">
+              ${makeRing(weeklyPct, 'var(--c-weekly)', 62)}
+              <span class="stat-label">Weekly</span>
+            </div>
+            <div class="stat-unit">
+              ${makeRing(monthlyPct, 'var(--c-monthly)', 62)}
+              <span class="stat-label">Monthly</span>
+            </div>
+          `;
+        }
+
+        // Checklist items
+        let taskRows = '';
+        if (sub.tasks.length === 0) {
+          taskRows = `<div class="empty-state">No topics logged yet. Add your targets below.</div>`;
+        } else {
+          taskRows = sub.tasks.map(t => `
+            <div class="task-row ${t.completed ? 'done' : ''}">
+              <div class="task-left">
+                <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${folder.id}', '${sub.id}', ${t.id})">
+                <span class="task-tag tag-${t.period}">${t.period}</span>
+                <span class="task-txt">${t.text}</span>
+              </div>
+              <button class="btn-del" onclick="deleteTask('${folder.id}', '${sub.id}', ${t.id})">✕</button>
+            </div>
+          `).join('');
+        }
+
+        container.innerHTML = `
+          <div class="topic-view-container">
+            <!-- Progress Circles Ring Card -->
+            <div class="stats-card">
+              ${statsCardsHtml}
+            </div>
+
+            <!-- Add Target Form -->
+            <div class="add-box">
+              <input type="text" id="newTopicInput" placeholder="Enter target topic or exercise..." onkeydown="if(event.key==='Enter') addTask('${folder.id}', '${sub.id}')">
+              <select id="periodSelect">
+                ${isCsat ? `
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                ` : `
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                `}
+              </select>
+              <button class="btn-submit" onclick="addTask('${folder.id}', '${sub.id}')">Add Target</button>
+            </div>
+
+            <!-- Target Checklist -->
+            <div class="list-card">
+              <div style="font-size:0.85rem; font-weight:700; color:var(--text-dim); text-transform:uppercase;">Checklist</div>
+              ${taskRows}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
